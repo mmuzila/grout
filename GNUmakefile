@@ -130,17 +130,22 @@ frr_version = $(shell sed -nE 's/^source_filename = frr-(.+)\.tar\.gz$$/\1/p' su
 frr_hash = $(shell sed -nE 's/^source_hash = //p' subprojects/frr.wrap)
 frr_archive = subprojects/packagecache/frr-$(frr_version).tar.gz
 
-.PHONY: frr-rpm
-frr-rpm:
+.PHONY: frr-srpm
+frr-srpm:
 	meson subprojects download frr
 	echo '$(frr_hash)  $(frr_archive)' | sha256sum -c
-	install -Dt ~/rpmbuild/SOURCES $(frr_archive)
-	rpmbuild -bb -D'version $(frr_version)' -D 'release 1$(rpmdist).grout' rpm/frr.spec
+	install -Dt "`rpm --eval '%{_sourcedir}'`" $(frr_archive)
+	rpmbuild -bs -D'version $(frr_version)' -D 'release 1$(rpmdist).grout' rpm/frr.spec
+
+frr_nvr = $(frr_version)-1$(rpmdist).grout
+
+.PHONY: frr-rpm
+frr-rpm: frr-srpm
+	rpmbuild --rebuild -D'version $(frr_version)' -D 'release 1$(rpmdist).grout' "`rpm --eval '%{_srcrpmdir}'`/frr-$(frr_nvr).src.rpm"
 	$Q arch=`rpm --eval '%{_arch}'` && \
-	version="$(frr_version)-1$(rpmdist).grout" && \
-	mv -vf ~/rpmbuild/RPMS/noarch/frr-headers-$$version.noarch.rpm frr-headers.noarch.rpm && \
-	mv -vf ~/rpmbuild/RPMS/$$arch/frr-$$version.$$arch.rpm frr.$$arch.rpm && \
-	mv -vf ~/rpmbuild/RPMS/$$arch/frr-debuginfo-$$version.$$arch.rpm frr-debuginfo.$$arch.rpm
+	mv -vf "`rpm --eval '%{_rpmdir}'`"/noarch/frr-headers-$(frr_nvr).noarch.rpm frr-headers.noarch.rpm && \
+	mv -vf "`rpm --eval '%{_rpmdir}'`"/$$arch/frr-$(frr_nvr).$$arch.rpm frr.$$arch.rpm && \
+	mv -vf "`rpm --eval '%{_rpmdir}'`"/$$arch/frr-debuginfo-$(frr_nvr).$$arch.rpm frr-debuginfo.$$arch.rpm
 
 CLANG_FORMAT ?= clang-format
 c_src = git ls-files '*.[ch]' ':!:subprojects'
