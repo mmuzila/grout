@@ -111,6 +111,7 @@ rpmversion = $(firstword $(version))
 rpmdist = $(shell rpm --eval %{dist} 2>/dev/null)
 rpmrelease = $(subst -,.,$(lastword $(version)))$(rpmdist)
 rpmbuild_opts = $(addprefix --with=,$(WITH)) $(addprefix --without=,$(WITHOUT))
+rpmbuild_srcrpmdir ?= $(shell rpm --eval %{_srcrpmdir})
 
 .PHONY: rpm
 rpm:
@@ -135,7 +136,7 @@ frr-srpm:
 	meson subprojects download frr
 	echo '$(frr_hash)  $(frr_archive)' | sha256sum -c
 	install -Dt "`rpm --eval '%{_sourcedir}'`" $(frr_archive)
-	rpmbuild -bs -D'version $(frr_version)' -D 'release 1$(rpmdist).grout' rpm/frr.spec
+	rpmbuild -bs -D "_srcrpmdir $(rpmbuild_srcrpmdir)" -D'version $(frr_version)' -D 'release 1$(rpmdist).grout' rpm/frr.spec
 
 frr_nvr = $(frr_version)-1$(rpmdist).grout
 
